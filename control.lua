@@ -1,4 +1,5 @@
 local configchange = require("configchange")
+local snapping = require("snapping")
 local util = require("util")
 
 local use_snapping = settings.global["miniloader-snapping"].value
@@ -39,8 +40,6 @@ local use_snapping = settings.global["miniloader-snapping"].value
 -- Utility Functions
 
 -- Event Handlers
-
-local snapping = require("snapping")
 
 local function on_init()
 	local force = game.create_force("miniloader")
