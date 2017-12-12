@@ -1,6 +1,8 @@
-local filters = {
-	allowed_categories = {"bulk"},
-}
+local filters = {}
+
+local util = require("util")
+
+-- constants
 
 local output_inventories = {
 	defines.inventory.cargo_wagon,
@@ -25,7 +27,11 @@ local patterns = {
 		"^angels-.*-slag",
 		-- angelssmelting
 		"^processed-"
-	}
+	},
+	plates = {
+		-- generic
+		"-plate$",
+	},
 }
 
 -- bulk items that don't fit the above patterns
@@ -43,8 +49,19 @@ local items = {
 		-- angelsrefining
 		"stone-crushed",
 		"slag"
-	}
+	},
+	plates = {
+	},
 }
+
+local classes = {
+	["bulk"] = {"bulk"},
+	["bulk+plates"] = {"bulk", "plates"},
+}
+
+-- runtime variables
+
+local current_class = "bulk"
 
 local function has_transport_line(entity)
 	return entity.type == "transport-belt" or entity.type == "underground-belt" or entity.type == "splitter" or
@@ -54,34 +71,33 @@ end
 local function is_in_category(item_name, category)
 	for _, it in ipairs(items[category]) do
 		if item_name == it then
+			log("{item="..item_name..", category="..category.."}")
 			return true
 		end
 	end
 	for _, pat in ipairs(patterns[category]) do
 		if string.match(item_name, pat) then
+			log("{item="..item_name..", category="..category..", pattern="..pat.."}")
 			return true
 		end
 	end
 	return false
 end
 
-local acceptable_item_cache = {}
-
-local function is_acceptable_item(item_name)
-	if filters.allowed_categories == nil then
-		return true
-	end
-	if acceptable_item_cache[item_name] then
-		return true
-	end
-	for _, category in ipairs(filters.allowed_categories) do
-		if is_in_category(item_name, category) then
-			acceptable_item_cache[item_name] = true
-			return true
+local is_acceptable_item
+do
+	local memoized = util.memoize(function(class, item_name)
+		for _, category in ipairs(classes[class]) do
+			if is_in_category(item_name, category) then
+				log(item_name.." is in class "..class)
+				return true
+			end
 		end
+		return false
+	end)
+	is_acceptable_item = function(item_name)
+		return memoized(current_class, item_name)
 	end
-	acceptable_item_cache[item_name] = false
-	return false
 end
 
 local function transport_line_index(entity, position)
@@ -121,24 +137,31 @@ local function transport_line_acceptable_item(entity, position)
 	for i = tli, tli+1 do
 		local tl = entity.get_transport_line(i)
 		if #tl > 0 and tl[1].valid_for_read and is_acceptable_item(tl[1].name) then
-			return name
+			return tl[1].name
 		end
 	end
 end
 
 local entity_inventories_cache = {}
+
 local function entity_output_inventory(entity)
 	local cache_entry = entity_inventories_cache[entity.type]
 	if cache_entry then
-		return cache_entry
+		if cache_entry > 0 then
+			return cache_entry
+		end
+		return nil
 	end
 	for _, inventory_index in ipairs(output_inventories) do
 		if entity.get_inventory(inventory_index) then
 			entity_inventories_cache[entity.type] = inventory_index
-			log("for type "..entity.type.." found inventory: "..inventory_index)
+			log("{type="..entity.type..", inventory="..inventory_index.."}")
 			return inventory_index
 		end
 	end
+	log("{type="..entity.type..", inventory=0}")
+	entity_inventories_cache[entity.type] = 0
+	return nil
 end
 
 local function inventory_has_acceptable(inventory)
@@ -152,6 +175,10 @@ local function inventory_has_acceptable(inventory)
 end
 
 local function inventory_acceptable_item(entity)
+	local inventory_index = entity_output_inventory(entity)
+	if not inventory_index then
+		return nil
+	end
 	local inventory = entity.get_inventory(entity_output_inventory(entity))
 	if not inventory_has_acceptable(inventory) then
 		return nil
@@ -184,6 +211,10 @@ function filters.position_acceptable_item(surface, position)
 		end
 	end
 	return nil
+end
+
+function filters.on_restrictions_class_changed(class)
+	current_class = settings.global["miniloader-item-restrictions-class"].value
 end
 
 return filters

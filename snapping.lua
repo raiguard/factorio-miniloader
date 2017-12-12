@@ -69,7 +69,7 @@ local function snap_loader_to_target(loader, entity)
 	end
 
 	if direction ~= ldir or loader.belt_to_ground_type ~= belt_to_ground_type then
-		util.update_miniloader(loader, direction, belt_to_ground_type)
+		miniloader.set_orientation(loader, direction, belt_to_ground_type)
 	end
 	return true
 end
@@ -91,7 +91,7 @@ local function idiot_snap(loader, entity)
 	end
 	if loader.direction ~= direction or loader.belt_to_ground_type ~= "output" then
 		--loader.surface.create_entity{name="flying-text", position={loader.position.x-.25, loader.position.y-.5}, text = "^", color = {r=1}}
-		util.update_miniloader(loader, direction, "output")
+		miniloader.set_orientation(loader, direction, "output")
 		return true
 	end
 	return false

@@ -72,15 +72,15 @@ function util.is_miniloader(entity)
 	return string.find(entity.name, "miniloader$") ~= nil
 end
 
-function memoize(f)
-	local cache = setmetatable(cache, {__mode="kv"})
+function util.memoize(f)
+	local cache = {}
 	return function(...)
 		local args = {...}
 		local crawl = cache
 		for i=1,#args-1 do
 			local arg = args[i]
 			if not crawl[arg] then
-				crawl[arg] = setmetatable({}, {__mode="kv"})
+				crawl[arg] = {}
 			end
 			crawl = crawl[arg]
 		end
@@ -95,6 +95,10 @@ function memoize(f)
 		crawl[last_arg] = res
 		return unpack(res)
 	end
+end
+
+function util.entitylog(entity)
+	return entity.name .. "@" .. entity.position.x .. "," .. entity.position.y
 end
 
 return util

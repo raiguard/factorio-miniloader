@@ -107,7 +107,6 @@ local function create_inserter(prefix)
 		flags = {"placeable-off-grid"},
 		max_health = base_entity.max_health,
 		allow_custom_vectors = true,
-		filter_count = 1,
 		energy_per_movement = 2000,
 		energy_per_rotation = 2000,
 		energy_source = {
@@ -126,6 +125,10 @@ local function create_inserter(prefix)
 		hand_open_picture = empty_sheet,
 		hand_closed_picture = empty_sheet,
 	}
+
+	if settings.startup["miniloader-item-restrictions"].value then
+		loader_inserter.filter_count = 1
+	end
 
 	data:extend{loader_inserter}
 end

@@ -1,4 +1,5 @@
 local configchange = require("configchange")
+local filters = require("filters")
 local miniloader = require("miniloader")
 local snapping = require("snapping")
 local util = require("util")
@@ -37,6 +38,10 @@ local use_snapping = settings.global["miniloader-snapping"].value
 ]]
 -- Event Handlers
 
+local function have_filters()
+	return settings.startup["miniloader-item-restrictions"].value
+end
+
 local function on_init()
 	local force = game.create_force("miniloader")
 	-- allow miniloader force to access chests belonging to players
@@ -44,28 +49,28 @@ local function on_init()
 	-- allow players to see power icons on miniloader inserters
 	force.set_friend(game.forces["player"], true)
 
-	global.uninitialized_loaders = {}
+	if have_filters() then
+		global.uninitialized_loaders = {}
+		filters.on_restrictions_class_changed()
+	end
 end
 
-local function on_configuration_changed()
-	game.print("starting on_configuration_changed: "..serpent.line(global))
-	if not global.uninitialized_loaders then
-		global.uninitialized_loaders = {}
-		for _, surface in pairs(game.surfaces) do
-			for _, entity in ipairs(surface.find_entities_filtered{type="underground-belt"}) do
-				if util.is_miniloader(entity) then
-					miniloader.register_uninitialized(entity)
-				end
-			end
-		end
-	end
-	game.print("after on_configuration_changed: "..serpent.line(global))
+local function on_load()
+	filters.on_restrictions_class_changed()
 end
 
 local function on_configuration_changed(configuration_changed_data)
 	local mod_change = configuration_changed_data.mod_changes["miniloader"]
 	if mod_change and mod_change.old_version and mod_change.old_version ~= mod_change.new_version then
 		configchange.on_mod_version_changed(mod_change.old_version)
+	end
+	if have_filters() then
+		if not global.uninitialized_loaders then
+			global.uninitialized_loaders = {}
+			miniloader.reset_all_filters()
+		end
+	else
+		global.uninitialized_loaders = nil
 	end
 end
 
@@ -124,10 +129,14 @@ end
 local function on_setting_changed(event)
 	if event.setting == "miniloader-snapping" then
 		use_snapping = settings.global["miniloader-snapping"].value
+	elseif event.setting == "miniloader-item-restrictions-class" and have_filters() then
+		filters.on_restrictions_class_changed()
+		miniloader.reset_all_filters()
 	end
 end
 
 script.on_init(on_init)
+script.on_load(on_load)
 script.on_configuration_changed(on_configuration_changed)
 
 script.on_event({defines.events.on_built_entity, defines.events.on_robot_built_entity}, on_built)

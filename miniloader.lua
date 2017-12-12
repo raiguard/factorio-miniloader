@@ -8,7 +8,7 @@ function miniloader.pickup_position(entity)
 	if entity.belt_to_ground_type == "output" then
 		return util.moveposition(entity.position, util.offset(util.opposite_direction(entity.direction), 0.75, 0))
 	end
-	return util.moveposition(entity.position, util.offset(entity.direction, 0.25, 0))
+	return entity.position
 end
 
 function miniloader.drop_positions(entity)
@@ -68,57 +68,84 @@ function miniloader.set_orientation(entity, direction, type)
 	miniloader.update_inserters(entity)
 end
 
+function miniloader.has_filter(entity)
+	if not filters.allowed_categories then
+		return true
+	end
+	local inserters = miniloader.get_loader_inserters(entity)
+	return inserters[1].get_filter(1) ~= nil
+end
+
 function miniloader.set_filter(entity)
+	log("set_filter starting on "..util.entitylog(entity))
+	if not settings.startup["miniloader-item-restrictions"].value then
+		log("set_filter: filters are disabled")
+		return
+	end
 	local item = filters.position_acceptable_item(entity.surface, miniloader.pickup_position(entity))
 	local inserters = miniloader.get_loader_inserters(entity)
 	if inserters[1].get_filter(1) ~= item then
+		local display_text = {"item-name.none"}
+		if item then
+			display_text = {"item-name."..item}
+		end
+		entity.surface.create_entity{
+			name="flying-text",
+			position=entity.position,
+			text=display_text,
+			color={r=1},
+		}
 		log("set loader "..serpent.line(entity.position).." to "..(item or "nil"))
 	end
 
 	for i = 1, #inserters do
 		inserters[i].set_filter(1, item)
 	end
-	return item ~= nil
+	if item == nil then
+		miniloader.register_uninitialized(entity)
+    else
+		miniloader.unregister_uninitialized(entity)
+    end
 end
 
---[[
-local function position_key(entity)
-	return entity.surface.name .. "@" .. entity.position.x .. "," .. entity.position.y
-end
-
-local function miniloader_by_position_key(key)
-	local surface, x, y = string.match(key, "^([^@]+)@([%d.-]+),([%d.-]+)$")
-	if not surface then
-		return nil
-	end
-	return game.surfaces[surface].find_entities_filtered{type="underground-belt", position={x, y}}[1]
-end
-]]
-
-local uninitialized_loaders = {}
-local uninitialized_loaders_iter
-local function check_uninitialized()
-	uninitialized_loaders_iter, _ = next(uninitialized_loaders, uninitialized_loaders_iter)
-	if uninitialized_loaders_iter then
-		local entity = miniloader_by_position_key(uninitialized_loaders_iter)
-		if entity then
-			--miniloader.update_inserters(entity)
+function miniloader.reset_all_filters()
+	log("starting reset_all_filters")
+	for _, surface in pairs(game.surfaces) do
+		for _, entity in ipairs(surface.find_entities_filtered{type="underground-belt"}) do
+			if util.is_miniloader(entity) then
+				miniloader.set_filter(entity)
+			end
 		end
 	end
 end
 
+local function position_key(entity)
+	return entity.surface.name .. "@" .. entity.position.x .. "," .. entity.position.y
+end
+
+local uninitialized_loaders_iter
+local function check_uninitialized()
+	uninitialized_loaders_iter, entity = next(global.uninitialized_loaders, uninitialized_loaders_iter)
+	if uninitialized_loaders_iter then
+		miniloader.set_filter(entity)
+	end
+end
+
 function miniloader.register_uninitialized(entity)
-	uninitialized_loaders[position_key(entity)] = true
+	global.uninitialized_loaders[position_key(entity)] = entity
 	-- reset iterator due to modification to table
 	uninitialized_loaders_iter = nil
-	ontick.register(check_uninitialized, 1)
+	ontick.register(check_uninitialized, 60)
 end
 
 function miniloader.unregister_uninitialized(entity)
-	uninitialized_loaders[position_key(entity)] = nil
+	if not global.uninitialized_loaders then
+		return
+	end
+	global.uninitialized_loaders[position_key(entity)] = nil
 	-- reset iterator due to modification to table
 	uninitialized_loaders_iter = nil
-	if not next(uninitialized_loaders) then
+	if not next(global.uninitialized_loaders) then
 		ontick.unregister(check_uninitialized)
 	end
 end
@@ -139,12 +166,7 @@ function miniloader.update_inserters(entity)
 		inserters[i].drop_position = drop[2]
 		inserters[i].direction = inserters[i].direction
     end
-    local found_item = miniloader.set_filter(entity)
-	if not found_item then
-		miniloader.register_uninitialized(entity)
-    else
-		miniloader.unregister_uninitialized(entity)
-    end
+    miniloader.set_filter(entity)
 end
 
 function miniloader.num_inserters(entity)
