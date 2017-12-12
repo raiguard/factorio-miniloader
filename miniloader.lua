@@ -82,30 +82,31 @@ function miniloader.set_filter(entity)
 		log("set_filter: filters are disabled")
 		return
 	end
-	local item = filters.position_acceptable_item(entity.surface, miniloader.pickup_position(entity))
+	local new_item = filters.position_acceptable_item(entity.surface, miniloader.pickup_position(entity))
 	local inserters = miniloader.get_loader_inserters(entity)
-	if inserters[1].get_filter(1) ~= item then
-		local display_text = {"item-name.none"}
-		if item then
-			display_text = {"item-name."..item}
+	local old_item = inserters[1].get_filter(1)
+	for i = 1, #inserters do
+		inserters[i].set_filter(1, new_item)
+	end
+	if old_item ~= new_item then
+		local display_text = {"miniloader-message.unlocked"}
+		if new_item then
+			display_text = {"miniloader-message.locked", {"item-name."..new_item}}
 		end
 		entity.surface.create_entity{
 			name="flying-text",
 			position=entity.position,
 			text=display_text,
-			color={r=1},
+			color={r=.8,g=1,b=.8,a=.5},
 		}
-		log("set loader "..serpent.line(entity.position).." to "..(item or "nil"))
+		log("set loader "..serpent.line(entity.position).." to "..(new_item or "nil"))
 	end
 
-	for i = 1, #inserters do
-		inserters[i].set_filter(1, item)
-	end
-	if item == nil then
+	if new_item == nil then
 		miniloader.register_uninitialized(entity)
-    else
+	else
 		miniloader.unregister_uninitialized(entity)
-    end
+	end
 end
 
 function miniloader.reset_all_filters()
@@ -132,9 +133,13 @@ local function check_uninitialized()
 end
 
 function miniloader.register_uninitialized(entity)
-	global.uninitialized_loaders[position_key(entity)] = entity
-	-- reset iterator due to modification to table
-	uninitialized_loaders_iter = nil
+	local key = position_key(entity)
+	local new_value = global.uninitialized_loaders[key] == nil
+	global.uninitialized_loaders[key] = entity
+	if new_value then
+		-- reset iterator due to modification to table
+		uninitialized_loaders_iter = nil
+	end
 	ontick.register(check_uninitialized, 60)
 end
 
