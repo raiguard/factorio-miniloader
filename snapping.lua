@@ -1,5 +1,6 @@
 local snapping = {}
 
+local miniloader = require("miniloader")
 local util = require("util")
 
 local snapTypes = {

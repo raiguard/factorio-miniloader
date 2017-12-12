@@ -24,9 +24,6 @@ function miniloader.drop_positions(entity)
 end
 
 function miniloader.get_loader_inserters(entity)
-	if entity == nil then
-		error("got nil entity")
-	end
 	return entity.surface.find_entities_filtered{
 		position = entity.position,
 		name = entity.name .. "-inserter"
@@ -40,6 +37,8 @@ function miniloader.set_orientation(entity, direction, type)
 		local name = entity.name
 		local position = entity.position
 		local force = entity.force
+
+		-- temporarily remove items on the belt so they don't spill on the ground
 		local from_transport_lines = {}
 		for i=1, 2 do
 			local tl = entity.get_transport_line(i)
@@ -54,6 +53,8 @@ function miniloader.set_orientation(entity, direction, type)
 			type = type,
 			force = force,
 		}
+
+		-- put items back on the belt now that we're in the proper orientation
 		for i=1, 2 do
 			local tl = entity.get_transport_line(i)
 			for name, count in pairs(from_transport_lines[i]) do

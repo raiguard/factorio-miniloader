@@ -1,4 +1,5 @@
 local configchange = require("configchange")
+local miniloader = require("miniloader")
 local snapping = require("snapping")
 local util = require("util")
 
@@ -29,16 +30,11 @@ local use_snapping = settings.global["miniloader-snapping"].value
 	|                  |    v
 	|                  |
 	+------------------+
-	         P
+			 P
 
 	D: drop positions
 	P: pickup position
 ]]
-
--- Constants
-
--- Utility Functions
-
 -- Event Handlers
 
 local function on_init()
@@ -47,6 +43,23 @@ local function on_init()
 	game.forces["player"].set_friend(force, true)
 	-- allow players to see power icons on miniloader inserters
 	force.set_friend(game.forces["player"], true)
+
+	global.uninitialized_loaders = {}
+end
+
+local function on_configuration_changed()
+	game.print("starting on_configuration_changed: "..serpent.line(global))
+	if not global.uninitialized_loaders then
+		global.uninitialized_loaders = {}
+		for _, surface in pairs(game.surfaces) do
+			for _, entity in ipairs(surface.find_entities_filtered{type="underground-belt"}) do
+				if util.is_miniloader(entity) then
+					miniloader.register_uninitialized(entity)
+				end
+			end
+		end
+	end
+	game.print("after on_configuration_changed: "..serpent.line(global))
 end
 
 local function on_configuration_changed(configuration_changed_data)
@@ -60,15 +73,16 @@ local function on_built(event)
 	local entity = event.created_entity
 	if util.is_miniloader(entity) then
 		local surface = entity.surface
-		for i = 1, util.num_inserters(entity) do
-			local inserter = surface.create_entity{
+		for i = 1, miniloader.num_inserters(entity) do
+			local inserter =
+				surface.create_entity {
 				name = entity.name .. "-inserter",
 				position = entity.position,
-				force = "miniloader",
+				force = "miniloader"
 			}
 			inserter.destructible = false
 		end
-		util.update_inserters(entity)
+		miniloader.update_inserters(entity)
 
 		if use_snapping then
 			-- adjusts direction & belt_to_ground_type
@@ -85,7 +99,7 @@ local function on_rotated(event)
 		snapping.check_for_loaders(event)
 	end
 	if util.is_miniloader(entity) then
-		util.update_inserters(entity)
+		miniloader.update_inserters(entity)
 	end
 end
 
@@ -95,8 +109,10 @@ local function on_mined(event)
 		return
 	end
 
-	local inserters = util.get_loader_inserters(entity)
-	for i=1, #inserters do
+	miniloader.unregister_uninitialized(entity)
+
+	local inserters = miniloader.get_loader_inserters(entity)
+	for i = 1, #inserters do
 		-- return items to player / robot if mined
 		if event.buffer then
 			event.buffer.insert(inserters[i].held_stack)
@@ -105,17 +121,18 @@ local function on_mined(event)
 	end
 end
 
-script.on_init(on_init)
-script.on_configuration_changed(on_configuration_changed)
-script.on_event(defines.events.on_built_entity, on_built)
-script.on_event(defines.events.on_robot_built_entity, on_built)
-script.on_event(defines.events.on_player_rotated_entity, on_rotated)
-script.on_event(defines.events.on_player_mined_entity, on_mined)
-script.on_event(defines.events.on_robot_mined_entity, on_mined)
-script.on_event(defines.events.on_entity_died, on_mined)
-
-script.on_event(defines.events.on_runtime_mod_setting_changed, function(event)
+local function on_setting_changed(event)
 	if event.setting == "miniloader-snapping" then
 		use_snapping = settings.global["miniloader-snapping"].value
 	end
-end)
+end
+
+script.on_init(on_init)
+script.on_configuration_changed(on_configuration_changed)
+
+script.on_event({defines.events.on_built_entity, defines.events.on_robot_built_entity}, on_built)
+script.on_event(defines.events.on_player_rotated_entity, on_rotated)
+script.on_event({defines.events.on_player_mined_entity, defines.events.on_robot_mined_entity}, on_mined)
+script.on_event(defines.events.on_entity_died, on_mined)
+
+script.on_event(defines.events.on_runtime_mod_setting_changed, on_setting_changed)

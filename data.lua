@@ -107,6 +107,7 @@ local function create_inserter(prefix)
 		flags = {"placeable-off-grid"},
 		max_health = base_entity.max_health,
 		allow_custom_vectors = true,
+		filter_count = 1,
 		energy_per_movement = 2000,
 		energy_per_rotation = 2000,
 		energy_source = {
@@ -117,6 +118,7 @@ local function create_inserter(prefix)
 		rotation_speed = 20.0,
 		collision_box = {{-0.1, -0.1}, {0.1, 0.1}},
 		selection_box = {{-0.0, -0.0}, {0.0, 0.0}},
+		drawing_box = {{-0.3, -0.3}, {0.3, 0.3}},
 		pickup_position = {0, 0},
 		insert_position = {0, 1.0},
 		platform_picture = { sheet = empty_sheet },
