@@ -72,24 +72,28 @@ function util.is_miniloader(entity)
 	return string.find(entity.name, "miniloader$") ~= nil
 end
 
-local on_tick_handlers = {}
-local function on_tick_meta_handler(event)
-	for handler, interval in pairs(on_tick_handlers) do
-		if event.tick % interval == 0 then
-			handler()
+function memoize(f)
+	local cache = setmetatable(cache, {__mode="kv"})
+	return function(...)
+		local args = {...}
+		local crawl = cache
+		for i=1,#args-1 do
+			local arg = args[i]
+			if not crawl[arg] then
+				crawl[arg] = setmetatable({}, {__mode="kv"})
+			end
+			crawl = crawl[arg]
 		end
-	end
-end
-
-function util.register_on_tick(f, interval)
-	on_tick_handlers[f] = interval
-	script.on_event(defines.events.on_tick, on_tick_meta_handler)
-end
-
-function util.unregister_on_tick(f)
-	on_tick_handlers[f] = nil
-	if not next(on_tick_handlers) then
-		script.on_event(defines.events.on_tick, nil)
+		-- result should be in crawl, if available
+		local last_arg = args[#args]
+		local res = crawl[last_arg]
+		if res ~= nil then
+			return unpack(res)
+		end
+		-- need to evaluate and store
+		res = {f(...)}
+		crawl[last_arg] = res
+		return unpack(res)
 	end
 end
 

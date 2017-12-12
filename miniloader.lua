@@ -1,6 +1,7 @@
 local miniloader = {}
 
 local filters = require("filters")
+local ontick = require("lualib.ontick")
 local util = require("util")
 
 function miniloader.pickup_position(entity)
@@ -110,7 +111,7 @@ function miniloader.register_uninitialized(entity)
 	uninitialized_loaders[position_key(entity)] = true
 	-- reset iterator due to modification to table
 	uninitialized_loaders_iter = nil
-	util.register_on_tick(check_uninitialized, 1)
+	ontick.register(check_uninitialized, 1)
 end
 
 function miniloader.unregister_uninitialized(entity)
@@ -118,7 +119,7 @@ function miniloader.unregister_uninitialized(entity)
 	-- reset iterator due to modification to table
 	uninitialized_loaders_iter = nil
 	if not next(uninitialized_loaders) then
-		util.unregister_on_tick(check_uninitialized)
+		ontick.unregister(check_uninitialized)
 	end
 end
 
