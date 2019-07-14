@@ -5,24 +5,46 @@ local util = require "lualib.util"
 local M = {}
 
 function M.sync_filters(entity)
-  local filters = {}
-  local slots = entity.filter_slot_count
-  local inserter_filter_mode
-
-  for i=1,slots do
-    filters[i] = entity.get_filter(i)
-  end
   if entity.type == "inserter" then
     inserter_filter_mode = entity.inserter_filter_mode
   end
 
-  local inserters = util.get_loader_inserters(entity)
-  for _, ins in ipairs(inserters) do
-    for j=1,slots do
-      ins.set_filter(j, filters[j])
+  local loader = entity
+  if entity.type ~= 'loader' then loader = util.get_loader_from_inserter(entity)[1] end
+  if string.find(loader.name, 'advanced%-filter') then
+    -- TEMPORARY
+    local filters = {left='iron-ore', right='copper-ore'}
+    -- per-side filtering
+    local inserters = util.get_loader_inserters(entity, true)
+    for _, ins in ipairs(inserters.left) do
+      ins.set_filter(1, filters.left)
+      if inserter_filter_mode then
+        ins.inserter_filter_mode = inserter_filter_mode
+      end
     end
-    if inserter_filter_mode then
-      ins.inserter_filter_mode = inserter_filter_mode
+    for _, ins in ipairs(inserters.right) do
+      ins.set_filter(1, filters.right)
+      if inserter_filter_mode then
+        ins.inserter_filter_mode = inserter_filter_mode
+      end
+    end
+  else
+    -- no regard to which side of the belt
+    local filters = {}
+    local slots = entity.filter_slot_count
+    local inserter_filter_mode
+
+    for i=1,slots do
+      filters[i] = entity.get_filter(i)
+    end
+    local inserters = util.get_loader_inserters(entity)
+    for _, ins in ipairs(inserters) do
+      for j=1,slots do
+        ins.set_filter(j, filters[j])
+      end
+      if inserter_filter_mode then
+        ins.inserter_filter_mode = inserter_filter_mode
+      end
     end
   end
 end

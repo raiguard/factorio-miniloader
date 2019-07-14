@@ -1,3 +1,4 @@
+LOG = require('__stdlib__/stdlib/misc/logger').new('ML_Debug', true).log
 local blueprint = require("lualib.blueprint")
 local circuit = require("circuit")
 local configchange = require("configchange")

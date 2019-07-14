@@ -186,6 +186,9 @@ function util.drop_positions(entity, reverse)
   return out
 end
 
+local floor = math.floor
+local ceil = math.ceil
+
 function util.get_loader_from_inserter(entity)
   return entity.surface.find_entities_filtered{
     position = entity.position,
@@ -208,14 +211,13 @@ local dir_lib = {
   }
 }
 
--- finds all inserters for a given miniloader
 function util.get_loader_inserters(entity, filter_sides)
   local inserters = entity.surface.find_entities_filtered{
     position = entity.position,
     type = "inserter",
   }
   if filter_sides then
-    if entity.type ~= 'loader' then entity = util.get_loader_from_inserter(entity) end
+    if entity.type ~= 'loader' then entity = util.get_loader_from_inserter(entity)[1] end
     local dir = entity.direction
     local pos = entity.position
     local type = entity.loader_type
@@ -223,9 +225,9 @@ function util.get_loader_inserters(entity, filter_sides)
     local right = {}
     for i=1,#inserters do
       if dir_lib[type][dir](inserters[i].drop_position, pos) then
-        table.insert(right, inserters[i].drop_position)
+        table.insert(right, inserters[i])
       else
-        table.insert(left, inserters[i].drop_position)
+        table.insert(left, inserters[i])
       end
     end
     return {left=left, right=right}

@@ -232,6 +232,16 @@ local function create_recipes(prefix)
   }
 end
 
+data:extend{
+  {
+    type = 'recipe',
+    enabled = true,
+    ingredients = {},
+    name = 'fast-advanced-filter-miniloader',
+    result = 'fast-advanced-filter-miniloader'
+  }
+}
+
 return {
   create_recipes = create_recipes,
 }
