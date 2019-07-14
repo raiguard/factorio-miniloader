@@ -9,6 +9,7 @@ local empty_sheet = {
 local function create_loaders(prefix, base_underground_name, tint)
   local loader_name = prefix .. "miniloader"
   local filter_loader_name = prefix .. "filter-miniloader"
+  local advanced_filter_loader_name = prefix .. "advanced-filter-miniloader"
   local name = loader_name .. "-loader"
 
   local entity = util.table.deepcopy(data.raw["underground-belt"][base_underground_name])
@@ -113,9 +114,18 @@ local function create_loaders(prefix, base_underground_name, tint)
   filter_entity.structure.direction_out.sheets[1].hr_version.filename = "__miniloader__/graphics/entity/hr-filter-template.png"
   filter_entity.filter_count = 5
 
+  local advanced_filter_entity = util.table.deepcopy(entity)
+  advanced_filter_entity.name = advanced_filter_loader_name .. "-loader"
+  advanced_filter_entity.structure.direction_in.sheets[1].tint = {r=0.65, g=0.65, b=1, a=1}
+  advanced_filter_entity.structure.direction_in.sheets[1].hr_version.tint = {r=0.65, g=0.65, b=1, a=1}
+  advanced_filter_entity.structure.direction_out.sheets[1].tint = {r=0.65, g=0.65, b=1, a=1}
+  advanced_filter_entity.structure.direction_out.sheets[1].hr_version.tint = {r=0.65, g=0.65, b=1, a=1}
+  advanced_filter_entity.filter_count = 5
+
   data:extend{
     entity,
     filter_entity,
+    advanced_filter_entity
   }
 end
 
@@ -182,6 +192,9 @@ local function create_inserters(prefix, next_prefix, base_underground_name, tint
   local filter_loader_name = prefix .. "filter-miniloader"
   local filter_name = filter_loader_name .. "-inserter"
   local filter_next_upgrade = next_prefix and next_prefix .. "filter-miniloader-inserter"
+  local advanced_filter_loader_name = prefix .. "advanced-filter-miniloader"
+  local advanced_filter_name = advanced_filter_loader_name .. "-inserter"
+  local advanced_filter_next_upgrade = next_prefix and next_prefix .. "advanced-filter-miniloader-inserter"
   local base_entity = data.raw["underground-belt"][base_underground_name]
   local speed = inserter_speed(base_entity.speed)
 
@@ -288,9 +301,23 @@ local function create_inserters(prefix, next_prefix, base_underground_name, tint
   filter_loader_inserter.filter_count = 5
   filter_loader_inserter.next_upgrade = filter_next_upgrade
 
+  local advanced_filter_loader_inserter = util.table.deepcopy(loader_inserter)
+  advanced_filter_loader_inserter.name = advanced_filter_name
+  advanced_filter_loader_inserter.localised_name = {"entity-name." .. advanced_filter_loader_name}
+  advanced_filter_loader_inserter.icons[1].tint = {r=0.65, g=0.65, b=1, a=1}
+  advanced_filter_loader_inserter.platform_picture.sheets[1].tint = {r=0.65, g=0.65, b=1, a=1}
+  advanced_filter_loader_inserter.platform_picture.sheets[1].hr_version.tint = {r=0.65, g=0.65, b=1, a=1}
+  advanced_filter_loader_inserter.minable.result = advanced_filter_loader_name
+  advanced_filter_loader_inserter.filter_count = 5
+  advanced_filter_loader_inserter.next_upgrade = advanced_filter_next_upgrade
+  advanced_filter_loader_inserter.circuit_wire_connection_points = nil
+  advanced_filter_loader_inserter.circuit_connector_sprites = nil
+  advanced_filter_loader_inserter.circuit_wire_max_distance = nil
+
   data:extend{
     loader_inserter,
     filter_loader_inserter,
+    advanced_filter_loader_inserter
   }
 end
 

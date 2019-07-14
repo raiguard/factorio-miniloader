@@ -1,6 +1,7 @@
 local function create_items(prefix, base_underground_name, tint)
   local name = prefix .. "miniloader"
   local filter_name = prefix .. "filter-miniloader"
+  local advanced_filter_name = prefix .. "advanced-filter-miniloader"
 
   local item = util.table.deepcopy(data.raw.item[base_underground_name])
   item.name = name
@@ -28,9 +29,17 @@ local function create_items(prefix, base_underground_name, tint)
   filter_item.order, _ = string.gsub(item.order, "e%[", "f[filter-", 1)
   filter_item.place_result = filter_name .. "-inserter"
 
+  local advanced_filter_item = util.table.deepcopy(item)
+  advanced_filter_item.name = advanced_filter_name
+  advanced_filter_item.localised_name = {"entity-name." .. advanced_filter_name}
+  advanced_filter_item.icons[1].icons = { {icon=advanced_filter_item.icon, tint={r=0.65, g=0.65, b=1, a=1}} }
+  advanced_filter_item.order, _ = string.gsub(item.order, "e%[", "f[advanced-filter-", 1)
+  advanced_filter_item.place_result = advanced_filter_name .. "-inserter"
+
   data:extend{
     item,
     filter_item,
+    advanced_filter_item
   }
 end
 
