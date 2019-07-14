@@ -162,7 +162,7 @@ local moveposition = util.moveposition
 local offset = util.offset
 -- drop positions for input  (belt->chest) = { 0.7, +-0.25}, { 0.9, +-0.25}, {1.1, +-0.25}, {1.3, +-0.25}
 -- drop positions for output (chest->belt) = {-0.2, +-0.25}, {-0.0, +-0.25}, {0.1, +-0.25}, {0.3, +-0.25}
-function util.drop_positions(entity)
+function util.drop_positions(entity, reverse)
   local base_offset = 0.7
   if entity.loader_type == "output" then
     base_offset = base_offset - 1
@@ -186,11 +186,51 @@ function util.drop_positions(entity)
   return out
 end
 
-function util.get_loader_inserters(entity)
+function util.get_loader_from_inserter(entity)
   return entity.surface.find_entities_filtered{
+    position = entity.position,
+    type = 'loader'
+  }
+end
+
+local dir_lib = {
+  input = {
+    [defines.direction.north] = function(i,e) return i.x > e.x end,
+    [defines.direction.south] = function(i,e) return i.x < e.x end,
+    [defines.direction.east]  = function(i,e) return i.y > e.y end,
+    [defines.direction.west]  = function(i,e) return i.y < e.y end
+  },
+  output = {
+    [defines.direction.north] = function(i,e) return i.x > e.x end,
+    [defines.direction.south] = function(i,e) return i.x < e.x end,
+    [defines.direction.east]  = function(i,e) return i.y > e.y end,
+    [defines.direction.west]  = function(i,e) return i.y < e.y end
+  }
+}
+
+-- finds all inserters for a given miniloader
+function util.get_loader_inserters(entity, filter_sides)
+  local inserters = entity.surface.find_entities_filtered{
     position = entity.position,
     type = "inserter",
   }
+  if filter_sides then
+    if entity.type ~= 'loader' then entity = util.get_loader_from_inserter(entity) end
+    local dir = entity.direction
+    local pos = entity.position
+    local type = entity.loader_type
+    local left = {}
+    local right = {}
+    for i=1,#inserters do
+      if dir_lib[type][dir](inserters[i].drop_position, pos) then
+        table.insert(right, inserters[i].drop_position)
+      else
+        table.insert(left, inserters[i].drop_position)
+      end
+    end
+    return {left=left, right=right}
+  end
+  return inserters
 end
 
 function util.update_miniloader(entity, direction, type)
